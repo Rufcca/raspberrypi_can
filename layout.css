@@ -1,0 +1,16 @@
+Screen {
+}
+Container {
+	layout: horizontal;
+	width: 100%;
+	height: 100%;
+}
+Can {
+	content-align: center middle ;
+	width: 22%;
+	padding: 0 1 0 1;
+	height: auto;
+	background: green;
+	border: green;
+}
+
