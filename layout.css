@@ -1,16 +1,19 @@
 Screen {
+	background: black;
+	text-style: bold;
+	color: green;
+	border:blank;
+	height:100%;
+	width:100%;
 }
 Container {
-	layout: horizontal;
 	width: 100%;
-	height: 100%;
+	height: 25%;
 }
 Can {
 	content-align: center middle ;
-	width: 22%;
-	padding: 0 1 0 1;
-	height: auto;
-	background: green;
-	border: green;
+	width: 23%;
+	padding: 0 0 0 0;
+	height: 100%;
+	border: heavy green;
 }
-

@@ -20,77 +20,141 @@ global i
 global payload
 global delta_ts
 global att_hz
-att_hz = 20
-i = 0
 global lst_ts
+att_hz = 10
+i = 0
 msgs = list()
 lst_ts = 0
 detal_ts = 0
 
 class CAN(App):
     CSS_PATH = "layout.css"
-
     BINDINGS = [
         ('q','quit','Quit'),
     ]
     def on_mount(self) -> None:
         asyncio.create_task(main())
     def compose(self) -> ComposeResult:
-        yield Header()
         yield Container(
-                Can(id='MAP',classes='box'),
-                Can(id='AIR_T',classes='box'),
-                Can(id='TPS',classes='box'),
-                Can(id='ENG_T',classes='box')
+                Horizontal(
+                Can(id='MAP',classes=''),
+                Can(id='AIR_T',classes=''),
+                Can(id='TPS',classes=''),
+                Can(id='ENG_T',classes='')
+                          )
+                )
+        yield Container(
+                Horizontal(
+                Can(id='GEAR',classes=''),
+                Can(id='FUEL_P',classes=''),
+                Can(id='OIL_P',classes=''),
+                Can(id='O2',classes='')
+                         )
+
+                )
+        yield Container(
+                Horizontal(
+                Can(id='RPM',classes=''),
+                Can(id='WS_FR',classes=''),
+                Can(id='COR_O2',classes=''),
+                Can(id='FUEL_F',classes=''),
+                )
                 )
         yield Footer()
-
 
 class Can(Static):
     global msgs
     global i
     global att_hz
     number = reactive(0)
-
     def on_mount(self) -> None:
         self.set_interval(1/att_hz,self.update_number)
     def update_number(self) -> None:
         self.number = i
     def watch_number(self, number: int) -> None:
         global lst_ts
-
         payload = 0
         delta_ts = 0
         timestamp = 0
         
         TPS = 0
         MAP = 0
-        A_T = 0
-        E_T = 0
-         
+        AIR_T = 0
+        ENG_T = 0
+                
+        GEAR = 0 #[6:8]
+        OIL_P = 0 #[0:2]
+        FUEL_P = 0 #[2:4]
+
+        O2 = 0
+        RPM = 0
+
+        WS_FR = 0
+        
+        COR_O2 = 0
+        FUEL_F = 0
+
+        found0 = False
+        found1 = False
+        found2 = False
+        found3 = False
+        found4 = False
+
         for msg in reversed(msgs):
-            if msg.arbitration_id == simplified_ids[0]:
+            if msg.arbitration_id == simplified_ids[0] and found0 == False:
                 TPS = int.from_bytes(bytes(msg.data[0:2]), byteorder='big', signed=True) * 0.1
                 MAP = int.from_bytes(bytes(msg.data[2:4]), byteorder='big', signed=True) * 0.001
-                A_T = int.from_bytes(bytes(msg.data[4:6]), byteorder='big', signed=True) * 0.1
-                E_T = int.from_bytes(bytes(msg.data[6:8]), byteorder='big', signed=True) * 0.1
+                AIR_T = int.from_bytes(bytes(msg.data[4:6]), byteorder='big', signed=True) * 0.1
+                ENG_T = int.from_bytes(bytes(msg.data[6:8]), byteorder='big', signed=True) * 0.1
                 crnt_ts = float(msg.timestamp)
                 delta_ts = crnt_ts - lst_ts if crnt_ts > lst_ts else delta_ts  
                 lst_ts = float(msg.timestamp)
                 timestamp = msg.timestamp
+                found0 = True
+            if msg.arbitration_id == simplified_ids[1] and found1 == False:
+                GEAR   = int.from_bytes(bytes(msg.data[6:8]),byteorder='big',signed=True)
+                OIL_P  = int.from_bytes(bytes(msg.data[0:2]),byteorder='big',signed=True) * 0.001
+                FUEL_P = int.from_bytes(bytes(msg.data[2:4]),byteorder='big',signed=True) * 0.001
+                found1 = True
+            if msg.arbitration_id == simplified_ids[2] and found2 == False:
+                O2 = int.from_bytes(bytes(msg.data[0:2]),byteorder='big',signed=True) * 0.001
+                RPM = int.from_bytes(bytes(msg.data[2:4]),byteorder='big',signed=True)
+                found2 = True
+            if msg.arbitration_id == simplified_ids[3] and found3 == False:
+                WS_FR = int.from_bytes(bytes(msg.data[2:4]),byteorder='big',signed=True) * 0.1
+                found3 = True
+            if msg.arbitration_id == simplified_ids[8]:
+                COR_O2 = int.from_bytes(bytes(msg.data[0:2]),byteorder='big',signed=True)
+                FUEL_F = int.from_bytes(bytes(msg.data[2:4]),byteorder='big',signed=True) * 0.01
+                found4 = True
+            if found0 == True and found1 == True and found2 == True and found3 == True and found4 == True:
                 break
-        # for msg in msgs:
-        #     msgs_dict.update({msg.arbitration_id:f'{str(bytes(msg.data[0:2]).hex())} {str(bytes(msg.data[2:4]).hex())} {str(bytes(msg.data[4:6]).hex())} {str(bytes(msg.data[6:8]).hex())}'})
-        # self.update(str(self.id))
+
         if self.id == 'TPS':
             self.update(f'{self.id}: {TPS:.1f}')
         if self.id == 'MAP':
             self.update(f'{self.id}: {MAP:.2f}')
         if self.id == 'AIR_T':
-            self.update(f'{self.id}: {A_T:.1f}')
+            self.update(f'TEMP AR: {AIR_T:.1f}')
         if self.id == 'ENG_T':
-            self.update(f'{self.id}: {E_T:.2f}')
-        # self.update(f'{timestamp:.3f},{delta_ts:.3f},{TPS:.2f},{MAP:.2f},{A_T:.2f},{E_T:.2f}')
+            self.update(f'TEMP MOTOR: {ENG_T:.1f}')
+        if self.id == 'GEAR':
+            self.update(f'MARCHA: {GEAR}')
+        if self.id == 'OIL_P':
+            self.update(f'PRESSAO OLEO: {OIL_P:.1f}')
+        if self.id == 'FUEL_P':
+            self.update(f'PRESSAO COMB: {FUEL_P:.1f}')
+        if self.id == 'O2':
+            self.update(f'LAMBDA: {O2:.3f}')
+        if self.id == 'RPM':
+            self.update(f'RPM: {RPM}')
+        if self.id == 'WS_FR':
+            self.update(f'VEL: {WS_FR}')
+        if self.id == 'COR_O2':
+            self.update(f'CORR: {COR_O2:.2f}')
+        if self.id == 'FUEL_F':
+            self.update(f'FLUXO: {FUEL_F:.2f}')
+
 async def listen_can(msg):
     global i
     i+=1
@@ -113,11 +177,10 @@ async def print_w_dly(msgs):
             A_T = int.from_bytes(bytes(msg.data[4:6]), byteorder='big', signed=True) * 0.1
             E_T = int.from_bytes(bytes(msg.data[6:8]), byteorder='big', signed=True) * 0.1
             crnt_ts = float(msg.timestamp)
-            delta_ts = (crnt_ts - lst_ts) if crnt_ts - lst_ts  < 25 else delta_ts  
+            delta_ts = (crnt_ts - lst_ts) if crnt_ts - lst_ts  < 25 else delta_ts
             lst_ts = float(msg.timestamp)
-            
-            # print(f'T:{msg.timestamp:.3f}-DT{delta_ts:.3f}|TPS:{TPS:.2f},MAP:{MAP:.2f},A_T:{A_T:.2f},E_T:{E_T:.2f}')
             break 
+
 async def main() -> None:
     listeners : List[MessageRecipient] = [listen_can,reader]
     loop = asyncio.get_running_loop()
