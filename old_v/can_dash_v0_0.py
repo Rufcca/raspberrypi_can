@@ -60,6 +60,7 @@ class CAN(App):
                 Can(id='FUEL_F',classes=''),
                 )
                 )
+        yield Can(id='DELTA_T',classes='')
         yield Footer()
 
 class Can(Static):
@@ -154,6 +155,8 @@ class Can(Static):
             self.update(f'CORR: {COR_O2:.2f}')
         if self.id == 'FUEL_F':
             self.update(f'FLUXO: {FUEL_F:.2f}')
+        if self.id == 'DELTA_T':
+            self.update(f'DELTA: {delta_ts}')
 
 async def listen_can(msg):
     global i
@@ -185,9 +188,9 @@ async def main() -> None:
     listeners : List[MessageRecipient] = [listen_can,reader]
     loop = asyncio.get_running_loop()
     notifier = can.Notifier(bus,listeners,loop=loop)
-    while True:
-        await print_w_dly(msgs)
-        await asyncio.sleep(0.5)
+    # while True:
+        # await print_w_dly(msgs)
+        # await asyncio.sleep(0.5)
 
 if __name__ == "__main__":    
     # asyncio.run(main())
